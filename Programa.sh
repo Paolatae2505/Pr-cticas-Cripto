@@ -1,64 +1,124 @@
 #!/bin/bash
 
-# Solicitar al usuario que ingrese el nombre del dominio
-read -p "Ingresa el nombre de dominio: " domain
+# Solicitar al usuario que ingrese el nombre del dominio o la IP
+read -p "Ingresa el nombre de dominio / IP's: " domain
 
-# Obtener información WHOIS
-whois_info=$(whois $domain)
+# Verificar si la entrada es una dirección IP
+if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Haz proporcionado una dirección IP"
 
-# Obtener la IP pública y sus segmentos usando nslookup
-ip_info=$(nslookup $domain)
+    whois_info=$(whois $domain)
+    # Imprimir información deseada
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DEL DOMINIO -------------"
+    echo "----------------------------------------------"
 
-# Extraer la IP pública y sus segmentos de la salida de nslookup
-ip_address=$(echo "$ip_info" | awk '/^Address: / { print $2 }')
-ip_segment=$(echo "$ip_address" | cut -d'.' -f1-3)
+    echo "$whois_info" | grep -E 'owner|country|address' | sed -e 's/owner/Nombre Org/' -e 's/country/País/' -e 's/address/Dirección/' 
 
-# Obtener el registro de disponibilidad
-availability=$(whois $domain | grep -i "domain status" | awk '{print $3}')
+    # Imprimir información deseada
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DE CONTACTO -------------"
+    echo "----------------------------------------------"
 
-# Imprimir información deseada
-echo "----------------------------------------------"
-echo "-------- INFORMACIÓN DEL DOMINIO -------------"
-echo "----------------------------------------------"
+    echo "$whois_info" | grep -E 'person|e-mail|phone' | sed -e 's/Person/Nombre del personal/' -e 's/e-mail/Correo electrónico/' -e 's/Phone/Teléfono/'
 
-echo "$whois_info" | grep -E 'Domain Name|Created On|Last Updated On|Expiration Date'
 
-echo "$whois_info" | grep -A3 'Registrant:' | grep -E 'Name:|City:|State:|Country:|Country Name:'
+    echo "----------------------------------------------"
+    echo "--------- CONECTIVIDAD DE RED ----------------"
+    echo "----------------------------------------------"
 
-echo "----------------------------------------------"
-echo "-------- INFORMACIÓN DEL PERSONAL ------------"
-echo "----------------------------------------------"
-
-echo "$whois_info" | grep -A3 'Administrative Contact:' | grep -E 'Name:|City:|State:|Country:|Country Name:'
-
-echo "$whois_info" | grep -A3 'Technical Contact:' | grep -E 'Name:|City:|State:|Country:|Country Name:'
-
-echo "$whois_info" | grep -A3 'Billing Contact:' | grep -E 'Name:|City:|State:|Country:|Country Name:'
-
-echo "----------------------------------------------"
-echo "--------- CONECTIVIDAD DE RED ----------------"
-echo "----------------------------------------------"
-
-# Realizar el ping al dominio
-if ping_result=$(ping -c 4 $domain 2>&1); then
-    echo "Conexión exitosa con $domain"
-    latency=$(echo "$ping_result" | grep -oP 'round-trip.*?=' | awk '{print $4}')
-    echo "Latencia: $latency ms"
+    # Realizar el ping al dominio
+    if ping_result=$(ping -c 4 $domain 2>&1); then
+        echo "Conexión exitosa con $domain"
+        latency=$(echo "$ping_result" | grep -oP 'round-trip.*?=' | awk '{print $4}')
+        echo "Latencia: $latency ms"
+    else
+        echo "No se pudo establecer conexión con $domain"
+    fi
 else
-    echo "No se pudo establecer conexión con $domain"
+
+    echo "Haz proporcionado un Dominio"
+    # Obtener información WHOIS
+    whois_info=$(whois $domain)
+
+    domain_extension="${domain##*.}"
+
+    # Obtener la IP pública y sus segmentos usando nslookup
+    ip_info=$(nslookup $domain)
+
+    # Extraer la IP pública y sus segmentos de la salida de nslookup
+    ip_address=$(echo "$ip_info" | awk '/^Address: / { print $2 }')
+    ip_segment=$(echo "$ip_address" | cut -d'.' -f1-3)
+
+    # Obtener el registro de disponibilidad
+    availability=$(whois $domain | grep -i "domain status" | awk '{print $3}')
+
+    # Imprimir información deseada
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DEL DOMINIO -------------"
+    echo "----------------------------------------------"
+
+    echo "$whois_info" | grep -E 'Domain Name|Created On|Creation Date|Last Updated On|Updated Date|Expiration Date|Registry Expiry Date' | sed -e 's/Domain Name/Nombre del Dominio/' -e 's/Created On\|Creation Date/Fecha de Creación/' -e 's/Last Updated On\|Updated Date/Última Actualización/' -e 's/Expiration Date\|Registry Expiry Date/Fecha de Vencimiento/'
+    
+    if [ "$domain_extension" = "com" ]; then
+    echo "Haz proporcionado un Dominio .com"
+
+    # Imprimir información deseada del registrante
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DEL REGISTRANTE ---------"
+    echo "----------------------------------------------"
+    echo "$whois_info" | grep -E 'Registrant Organization:|Registrant Country:|Registrant State/Province:|Registrant City:|Registrant Street:|Registrant Postal Code:' | sed -e 's/Registrant Organization:/Nombre de la Organización/' -e 's/Registrant Country:/País/' -e 's/Registrant State\/Province:/Estado\/Provincia/' -e 's/Registrant City:/Ciudad/' -e 's/Registrant Street:/Dirección/' -e 's/Registrant Postal Code:/Código Postal/'
+
+    # Imprimir información deseada del contacto administrativo
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DEL PERSONAL ------------"
+    echo "----------------------------------------------"
+    echo "$whois_info" | grep -E 'Registrant Name:|Registrant Email:|Registrant Phone:' | sed -e 's/Registrant Name:/Nombre/' -e 's/Registrant Email:/Correo electrónico/' -e 's/Registrant Phone:/Teléfono/'
+else
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DEL REGISTRANTE ---------"
+    echo "----------------------------------------------"
+    echo "$whois_info" | grep -A3 'Registrant:' | grep -E 'Name:|City:|State:|Country:|Country Name:' | sed -e 's/Name/Nombre Org/' -e 's/City/Ciudad/' -e 's/State/Estado/' -e 's/Country/País/' -e 's/Country Name/Nombre del País/'
+
+    echo "----------------------------------------------"
+    echo "-------- INFORMACIÓN DEL PERSONAL ------------"
+    echo "----------------------------------------------"
+
+    echo "Contacto Administrativo :"
+    echo "$whois_info" | grep -A3 'Administrative Contact:' | grep -E 'Name:|City:|State:|Country:|Country Name:' | sed -e 's/Name/Nombre/' -e 's/City/Ciudad/' -e 's/State/Estado/' -e 's/Country/País/' -e 's/Country Name/Nombre del País/'
+
+    echo "Contacto Técnico :"
+    echo "$whois_info" | grep -A3 'Technical Contact:' | grep -E 'Name:|City:|State:|Country:|Country Name:' | sed -e 's/Name/Nombre/' -e 's/City/Ciudad/' -e 's/State/Estado/' -e 's/Country/País/' -e 's/Country Name/Nombre del País/'
+
+    echo "Contacto de facturación :"
+    echo "$whois_info" | grep -A3 'Billing Contact:' | grep -E 'Name:|City:|State:|Country:|Country Name:' | sed -e 's/Name/Nombre/' -e 's/City/Ciudad/' -e 's/State/Estado/' -e 's/Country/País/' -e 's/Country Name/Nombre del País/'
 fi
+   
 
-echo "----------------------------------------------"
-echo "------ INFORMACIÓN DE LA IP PÚBLICA -----------"
-echo "----------------------------------------------"
+    echo "----------------------------------------------"
+    echo "--------- CONECTIVIDAD DE RED ----------------"
+    echo "----------------------------------------------"
 
-echo "IP Pública: $ip_address"
-echo "Segmentos de la IP: $ip_segment"
+    # Realizar el ping al dominio
+    if ping_result=$(ping -c 4 $domain 2>&1); then
+        echo "Conexión exitosa con $domain"
+        latency=$(echo "$ping_result" | grep -oP 'round-trip.*?=' | awk '{print $4}')
+        echo "Latencia: $latency ms"
+    else
+        echo "No se pudo establecer conexión con $domain"
+    fi
+
+    echo "----------------------------------------------"
+    echo "------ INFORMACIÓN DE LA IP PÚBLICA -----------"
+    echo "----------------------------------------------"
+
+    echo "IP Pública: $ip_address"
+    echo "Segmentos de la IP: $ip_segment"
 
 
-# Imprimir el registro de disponibilidad
-echo "----------------------------------------------"
-echo "---- REGISTRO DE DISPONIBILIDAD DEL DOMINIO ---"
-echo "----------------------------------------------"
-echo "Estado del dominio: $availability"
-
+    # Imprimir el registro de disponibilidad
+    echo "----------------------------------------------"
+    echo "---- REGISTRO DE DISPONIBILIDAD DEL DOMINIO ---"
+    echo "----------------------------------------------"
+    echo "Estado del dominio: $availability"
+fi
