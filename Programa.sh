@@ -1,26 +1,21 @@
 #!/bin/bash
 
-# Solicitar al usuario que ingrese el nombre del dominio o la IP
 echo "-------------------------------------------------"
 read -p "Ingresa el nombre de dominio / IP: " domain
 
-
-
-# Verificar si la entrada es una dirección IP
 if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "Haz proporcionado una dirección IP"
     
     exec > >(tee pentesting_$domain.txt)
 
     whois_info=$(whois $domain)
-    # Imprimir información deseada
+
     echo "----------------------------------------------"
     echo "-------- INFORMACIÓN DEL DOMINIO -------------"
     echo "----------------------------------------------"
 
     echo "$whois_info" | grep -E 'owner|country|address' | sed -e 's/owner/Nombre Org/' -e 's/country/País/' -e 's/address/Dirección/' 
 
-    # Imprimir información deseada
     echo "----------------------------------------------"
     echo "-------- INFORMACIÓN DE CONTACTO -------------"
     echo "----------------------------------------------"
@@ -31,30 +26,23 @@ if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "----------------------------------------------"
     echo "--------- CONECTIVIDAD  DE RED ---------------"
     echo "----------------------------------------------"
-
-    # Realizar el ping al dominio
     if ping_result=$(ping -c 4 $domain 2>&1); then
         echo "Conexión exitosa con $domain"
-                # Realizar el ping al dominio
-        ping_result=$(ping -c 10 unam.mx)  # Hacer ping 10 veces a unam.mx (o tu dominio/IP)
+              
+        ping_result=$(ping -c 10 unam.mx)  
 
-        # Extraer los tiempos de latencia de la salida del ping
         latency_values=$(echo "$ping_result" | grep -oP 'time=\K\d+\.\d+')
 
-        # Inicializar la suma de latencias y el contador
         sum_latency=0
         count=0
 
-        # Iterar sobre cada valor de latencia y sumarlos
         for latency in $latency_values; do
             sum_latency=$(echo "$sum_latency + $latency" | bc)
             count=$((count + 1))
         done
 
-        # Calcular el promedio de latencia
         average_latency=$(echo "scale=2; $sum_latency / $count" | bc)
 
-        # Imprimir el resultado
         echo "Latencia promedio: $average_latency ms"
 
     else
