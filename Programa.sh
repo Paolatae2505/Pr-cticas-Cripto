@@ -63,7 +63,7 @@ if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     
     ptr=$(nslookup -type=PTR $domain)
     ptr=$(echo "$ptr" | awk '/name =/ {print $NF}')
-    if [ -z "$ptr"]; then
+    if [ -z "$ptr" ]; then
     	echo "No se pudo encontrar el dominio"
     else
     	echo "Nombre de dominio: $ptr"
@@ -81,7 +81,7 @@ if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "----------------------------------------------"
     
     #dns=$(dnsmap $domain)
-    dns=$(echo "$whois_info" | grep -E 'nserver:')
+    dns=$(echo "$whois_info" | grep -E 'DNS:|nserver:|Name Server:')
     echo "$dns"
     
     echo "----------------------------------------------"
@@ -211,7 +211,7 @@ else
     echo "----------------------------------------------"
     
     #dns=$(dnsmap $domain)
-    dns=$(echo "$whois_info" | grep -E 'DNS:')
+    dns=$(echo "$whois_info" | grep -E 'DNS:|nserver:|Name Server:')
     echo "$dns"
     
     echo "----------------------------------------------"
