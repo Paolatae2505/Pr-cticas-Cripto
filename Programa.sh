@@ -2,7 +2,7 @@
 
 # Solicitar al usuario que ingrese el nombre del dominio o la IP
 echo "-------------------------------------------------"
-read -p "Ingresa el nombre de dominio / IP's: " domain
+read -p "Ingresa el nombre de dominio / IP: " domain
 
 
 
@@ -29,14 +29,34 @@ if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 
 
     echo "----------------------------------------------"
-    echo "--------- CONECTIVIDAD DE RED ----------------"
+    echo "--------- CONECTIVIDAD  DE RED ---------------"
     echo "----------------------------------------------"
 
     # Realizar el ping al dominio
     if ping_result=$(ping -c 4 $domain 2>&1); then
         echo "Conexión exitosa con $domain"
-        latency=$(echo "$ping_result" | grep -oP 'round-trip.*?=' | awk '{print $4}')
-        echo "Latencia: $latency ms"
+                # Realizar el ping al dominio
+        ping_result=$(ping -c 10 unam.mx)  # Hacer ping 10 veces a unam.mx (o tu dominio/IP)
+
+        # Extraer los tiempos de latencia de la salida del ping
+        latency_values=$(echo "$ping_result" | grep -oP 'time=\K\d+\.\d+')
+
+        # Inicializar la suma de latencias y el contador
+        sum_latency=0
+        count=0
+
+        # Iterar sobre cada valor de latencia y sumarlos
+        for latency in $latency_values; do
+            sum_latency=$(echo "$sum_latency + $latency" | bc)
+            count=$((count + 1))
+        done
+
+        # Calcular el promedio de latencia
+        average_latency=$(echo "scale=2; $sum_latency / $count" | bc)
+
+        # Imprimir el resultado
+        echo "Latencia promedio: $average_latency ms"
+
     else
         echo "No se pudo establecer conexión con $domain"
     fi
@@ -89,39 +109,32 @@ else
     
     exec > >(tee pentesting_$domain.txt)
     
-    # Obtener información WHOIS
     whois_info=$(whois $domain)
 
     domain_extension="${domain##*.}"
 
-    # Obtener la IP pública y sus segmentos usando nslookup
     ip_info=$(nslookup $domain)
 
-    # Extraer la IP pública y sus segmentos de la salida de nslookup
     ip_address=$(echo "$ip_info" | awk '/^Address: / { print $2 }')
     ip_segment=$(echo "$ip_address" | cut -d'.' -f1-3)
 
-    # Obtener el registro de disponibilidad
     availability=$(whois $domain | grep -i "domain status" | awk '{print $3}')
 
    echo "----------------------------------------------"
    echo "-------- INFORMACIÓN DEL DOMINIO -------------"
    echo "----------------------------------------------"
 
-   # Utilizamos sed para eliminar espacios en blanco adicionales y dar formato a la salida
+
    echo "$whois_info" | grep -E 'Domain Name|Created On|Creation Date|Last Updated On|Updated Date|Expiration Date|Registry Expiry Date' | sed -e 's/^\s*//;s/\s\s*/ /g' | sed -e 's/Domain Name/Nombre del Dominio/' -e 's/Created On\|Creation Date/Fecha de Creación/' -e 's/Last Updated On\|Updated Date/Última Actualización/' -e 's/Expiration Date\|Registry Expiry Date/Fecha de Vencimiento/'
 
     
     if [ "$domain_extension" = "com" ]; then
 
-
-    	# Imprimir información deseada del registrante
     	echo "----------------------------------------------"
     	echo "-------- INFORMACIÓN DEL REGISTRANTE ---------"
     	echo "----------------------------------------------"
     	echo "$whois_info" | grep -E 'Registrant Organization:|Registrant Country:|Registrant State/Province:|Registrant City:|Registrant Street:|Registrant Postal Code:' | sed -e 's/Registrant Organization:/Nombre de la Organización/' -e 's/Registrant Country:/País/' -e 's/Registrant State\/Province:/Estado\/Provincia :/' -e 's/Registrant City:/Ciudad :/' -e 's/Registrant Street:/Dirección :/' -e 's/Registrant Postal Code:/Código Postal :/'
 
-    	# Imprimir información deseada del contacto administrativo
     	echo "----------------------------------------------"
     	echo "-------- INFORMACIÓN DEL PERSONAL ------------"
     	echo "----------------------------------------------"
@@ -151,11 +164,20 @@ else
     echo "--------- CONECTIVIDAD DE RED ----------------"
     echo "----------------------------------------------"
 
-    # Realizar el ping al dominio
     if ping_result=$(ping -c 4 $domain 2>&1); then
         echo "Conexión exitosa con $domain"
-        latency=$(echo "$ping_result" | grep -oP 'round-trip.*?=' | awk '{print $4}')
-        echo "Latencia: $latency ms"
+        
+        ping_result=$(ping -c 10 unam.mx)
+
+        latency_values=$(echo "$ping_result" | grep -oP 'time=\K\d+\.\d+')
+        sum_latency=0
+        count=0
+        for latency in $latency_values; do
+            sum_latency=$(echo "$sum_latency + $latency" | bc)
+            count=$((count + 1))
+        done
+        average_latency=$(echo "scale=2; $sum_latency / $count" | bc)
+        echo "Latencia promedio: $average_latency ms"
     else
         echo "No se pudo establecer conexión con $domain"
     fi
